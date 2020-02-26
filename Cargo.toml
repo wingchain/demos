@@ -1,0 +1,13 @@
+[package]
+name = "trie-demo"
+version = "0.1.0"
+authors = ["guoxbin <guoxbin@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+trie-db = "0.20.0"
+reference-trie = "0.20.0"
+memory-db = "0.19.0"
+keccak-hasher = "0.15.2"

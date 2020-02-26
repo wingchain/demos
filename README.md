@@ -1,2 +1,2 @@
-# trie-demo
+# Trie demo
 Trie demo
