@@ -1,2 +1,3 @@
-# Trie demo
-Trie demo
+# Demos
+
+ - trie
