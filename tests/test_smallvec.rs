@@ -11,3 +11,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+#![allow(dead_code)]
+
+use smallvec::SmallVec;
+
+#[test]
+fn test_smallvec() {
+	let a: SmallVec<[u8; 4]> = SmallVec::from_slice("test".as_bytes());
+
+	println!("{}", a.spilled());
+}
