@@ -86,7 +86,7 @@ fn test_trie_insert() {
 
 	println!("after put(..., ...)");
 	println!("root: {:?}", root);
-	let t = RefTrieDBNoExt::new(&memdb, &root).unwrap();
+	let _t = RefTrieDBNoExt::new(&memdb, &root).unwrap();
 	// println!("trie: ");
 	// println!("{:#?}", t);
 	for (k, (v, rc)) in memdb.clone().drain() {
