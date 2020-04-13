@@ -18,7 +18,6 @@ extern crate test;
 use test::{Bencher, black_box};
 
 use parity_codec::{Decode, Encode};
-use parity_codec_derive::{Encode, Decode};
 
 #[derive(Encode, Decode)]
 struct Wrapper([u8; 128]);
@@ -110,7 +109,7 @@ fn bench_vec_decode(b: &mut Bencher) {
 	let encoded = a.encode();
 
 	let decode = || {
-		let t: Option<Vec<u8>> = Decode::decode(&mut &encoded[..]);
+		let t : Vec<u8> = Decode::decode(&mut &encoded[..]).unwrap();
 		t
 	};
 
@@ -124,7 +123,7 @@ fn bench_array_decode(b: &mut Bencher) {
 	let encoded = a.encode();
 
 	let decode = || {
-		let t: Option<Wrapper> = Decode::decode(&mut &encoded[..]);
+		let t: Wrapper = Decode::decode(&mut &encoded[..]).unwrap();
 		t
 	};
 
@@ -138,7 +137,7 @@ fn bench_enum_decode(b: &mut Bencher) {
 	let encoded = a.encode();
 
 	let decode = || {
-		let t: Option<Variable> = Decode::decode(&mut &encoded[..]);
+		let t: Variable = Decode::decode(&mut &encoded[..]).unwrap();
 		t
 	};
 

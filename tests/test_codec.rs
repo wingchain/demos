@@ -14,7 +14,6 @@
 
 #![allow(dead_code)]
 
-use parity_codec_derive::Encode;
 use parity_codec::Encode;
 
 #[derive(Encode)]
