@@ -25,12 +25,14 @@ use rayon::prelude::*;
 use chashmap::CHashMap;
 use crossbeam_queue::ArrayQueue;
 
+const TXS_COUNT : usize = 10000;
+
 #[bench]
 fn bench_queue_hashmap_rwlock_std(b: &mut Bencher) {
-	let txs = gen_txs(1000);
+	let txs = gen_txs(TXS_COUNT);
 
 	let run = move || {
-		let cache = Arc::new(RwLock::new(HashMap::with_capacity(1000)));
+		let cache = Arc::new(RwLock::new(HashMap::with_capacity(TXS_COUNT)));
 		txs.par_iter().for_each(|(hash, tx)| {
 			cache.write().unwrap().insert(hash.clone(), tx.clone());
 		});
@@ -41,10 +43,10 @@ fn bench_queue_hashmap_rwlock_std(b: &mut Bencher) {
 
 #[bench]
 fn bench_queue_hashmap_rwlock_parking_log(b: &mut Bencher) {
-	let txs = gen_txs(1000);
+	let txs = gen_txs(TXS_COUNT);
 
 	let run = move || {
-		let cache = Arc::new(parking_lot::RwLock::new(HashMap::with_capacity(1000)));
+		let cache = Arc::new(parking_lot::RwLock::new(HashMap::with_capacity(TXS_COUNT)));
 		txs.par_iter().for_each(|(hash, tx)| {
 			cache.write().insert(hash.clone(), tx.clone());
 		});
@@ -55,10 +57,10 @@ fn bench_queue_hashmap_rwlock_parking_log(b: &mut Bencher) {
 
 #[bench]
 fn bench_queue_chashmap(b: &mut Bencher) {
-	let txs = gen_txs(1000);
+	let txs = gen_txs(TXS_COUNT);
 
 	let run = move || {
-		let cache = CHashMap::with_capacity(1000);
+		let cache = CHashMap::with_capacity(TXS_COUNT);
 		txs.par_iter().for_each(|(hash, tx)| {
 			cache.insert(hash.clone(), tx.clone());
 		});
@@ -69,10 +71,10 @@ fn bench_queue_chashmap(b: &mut Bencher) {
 
 #[bench]
 fn bench_queue_array_queue(b: &mut Bencher) {
-	let txs = gen_txs(1000);
+	let txs = gen_txs(TXS_COUNT);
 
 	let run = move || {
-		let cache = ArrayQueue::new(1000);
+		let cache = ArrayQueue::new(TXS_COUNT);
 		txs.par_iter().for_each(|(_hash, tx)| {
 			cache.push(tx.clone()).unwrap();
 		});
@@ -83,7 +85,7 @@ fn bench_queue_array_queue(b: &mut Bencher) {
 
 #[bench]
 fn bench_queue_mpsc(b: &mut Bencher) {
-	let txs = gen_txs(1000);
+	let txs = gen_txs(TXS_COUNT);
 
 	let (ctx, _crx) = tokio::sync::mpsc::unbounded_channel();
 
