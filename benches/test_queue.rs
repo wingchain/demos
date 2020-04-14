@@ -42,7 +42,7 @@ fn bench_queue_hashmap_rwlock_std(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_queue_hashmap_rwlock_parking_log(b: &mut Bencher) {
+fn bench_queue_hashmap_rwlock_parking_lot(b: &mut Bencher) {
 	let txs = gen_txs(TXS_COUNT);
 
 	let run = move || {
@@ -92,6 +92,20 @@ fn bench_queue_mpsc(b: &mut Bencher) {
 	let run = move || {
 		txs.par_iter().for_each(|(_hash, tx)| {
 			ctx.send(tx.clone()).unwrap();
+		});
+	};
+
+	b.iter( || black_box(run()));
+}
+
+#[bench]
+fn bench_queue_vec_parking_lot(b: &mut Bencher) {
+	let txs = gen_txs(TXS_COUNT);
+
+	let run = move || {
+		let cache = Arc::new(parking_lot::RwLock::new(Vec::with_capacity(TXS_COUNT)));
+		txs.par_iter().for_each(|(_hash, tx)| {
+			cache.write().push(tx.clone());
 		});
 	};
 
