@@ -15,59 +15,53 @@
 
 extern crate test;
 
-use smallvec::alloc::rc::Rc;
+use rand::random;
+use smallvec::alloc::sync::Arc;
 use std::cell::RefCell;
 use test::{black_box, Bencher};
 
 #[bench]
-fn bench_ref_rc(b: &mut Bencher) {
-	struct X(u32);
-	struct A(Rc<RefCell<X>>);
-
-	let x = Rc::new(RefCell::new(X(10)));
-	let a = A(x.clone());
+fn bench_clone_owned(b: &mut Bencher) {
+	let txs = gen_txs(10000);
 
 	let run = || {
-		for _ in 0..1000 {
-			let mut x = a.0.borrow_mut();
-			x.0 = x.0 + 1;
-		}
+		let _ = txs.clone();
 	};
 
 	b.iter(|| black_box(run()));
 }
 
 #[bench]
-fn bench_ref_ref(b: &mut Bencher) {
-	struct X(u32);
-	struct A<'a>(&'a RefCell<X>);
+fn bench_clone_arc(b: &mut Bencher) {
+	let txs = gen_txs(10000);
 
-	let x = RefCell::new(X(10));
-	let a = A(&x);
+	let txs = txs.into_iter().map(Arc::new).collect::<Vec<_>>();
 
 	let run = || {
-		for _i in 0..1000 {
-			let mut x = a.0.borrow_mut();
-			x.0 = x.0 + 1;
-		}
+		let _ = txs.clone();
 	};
 
 	b.iter(|| black_box(run()));
 }
 
 #[bench]
-fn bench_ref_rc_read(b: &mut Bencher) {
-	struct X(u32);
-	struct A(Rc<X>);
+fn bench_clone_refcell_arc(b: &mut Bencher) {
+	let txs = gen_txs(10000);
 
-	let x = Rc::new(X(10));
-	let a = A(x.clone());
+	let txs = RefCell::new(txs.into_iter().map(Arc::new).collect::<Vec<_>>());
 
 	let run = || {
-		for _i in 0..1000 {
-			let _x = &*a.0;
-		}
+		let _ = txs.clone();
 	};
 
 	b.iter(|| black_box(run()));
+}
+
+fn gen_txs(size: usize) -> Vec<Vec<u8>> {
+	let mut txs = Vec::with_capacity(size);
+	for _ in 0..size {
+		let tx: Vec<u8> = (0..64).map(|_| random::<u8>()).collect();
+		txs.push(tx);
+	}
+	txs
 }

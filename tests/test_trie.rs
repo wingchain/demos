@@ -68,18 +68,41 @@ fn test_trie() {
 
 #[test]
 fn test_trie_insert() {
-
 	let mut memdb = MemoryDB::<KeccakHasher, PrefixedKey<_>, DBValue>::default();
 	let mut root = Default::default();
 
 	let mut root = {
 		let mut t = RefTrieDBMutNoExt::new(&mut memdb, &mut root);
-		t.insert(&b"abc".to_vec(), &b"111111111111111111111111111111111111111111111111111111111112".to_vec()).unwrap();
-		t.insert(&b"abc".to_vec(), &b"111111111111111111111111111111111111111111111111111111111111".to_vec()).unwrap();
-		t.insert(&b"def".to_vec(), &b"111111111111111111111111111111111111111111111111111111111111".to_vec()).unwrap();
-		t.insert(&b"ghi".to_vec(), &b"111111111111111111111111111111111111111111111111111111111111".to_vec()).unwrap();
-		t.insert(&b"jkl".to_vec(), &b"111111111111111111111111111111111111111111111111111111111111".to_vec()).unwrap();
-		t.insert(&b"mno".to_vec(), &b"111111111111111111111111111111111111111111111111111111111111".to_vec()).unwrap();
+		t.insert(
+			&b"abc".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111112".to_vec(),
+		)
+		.unwrap();
+		t.insert(
+			&b"abc".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111111".to_vec(),
+		)
+		.unwrap();
+		t.insert(
+			&b"def".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111111".to_vec(),
+		)
+		.unwrap();
+		t.insert(
+			&b"ghi".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111111".to_vec(),
+		)
+		.unwrap();
+		t.insert(
+			&b"jkl".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111111".to_vec(),
+		)
+		.unwrap();
+		t.insert(
+			&b"mno".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111111".to_vec(),
+		)
+		.unwrap();
 		t.root().clone()
 	};
 	let old_root = root.clone();
@@ -95,7 +118,11 @@ fn test_trie_insert() {
 
 	let root = {
 		let mut t = RefTrieDBMutNoExt::from_existing(&mut memdb, &mut root).unwrap();
-		t.insert(&b"abc".to_vec(), &b"111111111111111111111111111111111111111111111111111111111112".to_vec()).unwrap();
+		t.insert(
+			&b"abc".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111112".to_vec(),
+		)
+		.unwrap();
 		t.root().clone()
 	};
 
@@ -113,17 +140,36 @@ fn test_trie_insert() {
 
 #[test]
 fn test_trie_remove() {
-
 	let mut memdb = MemoryDB::<KeccakHasher, PrefixedKey<_>, DBValue>::default();
 	let mut root = Default::default();
 
 	let mut root = {
 		let mut t = RefTrieDBMutNoExt::new(&mut memdb, &mut root);
-		t.insert(&b"abc".to_vec(), &b"111111111111111111111111111111111111111111111111111111111111".to_vec()).unwrap();
-		t.insert(&b"def".to_vec(), &b"111111111111111111111111111111111111111111111111111111111111".to_vec()).unwrap();
-		t.insert(&b"ghi".to_vec(), &b"111111111111111111111111111111111111111111111111111111111111".to_vec()).unwrap();
-		t.insert(&b"jkl".to_vec(), &b"111111111111111111111111111111111111111111111111111111111111".to_vec()).unwrap();
-		t.insert(&b"mno".to_vec(), &b"111111111111111111111111111111111111111111111111111111111111".to_vec()).unwrap();
+		t.insert(
+			&b"abc".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111111".to_vec(),
+		)
+		.unwrap();
+		t.insert(
+			&b"def".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111111".to_vec(),
+		)
+		.unwrap();
+		t.insert(
+			&b"ghi".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111111".to_vec(),
+		)
+		.unwrap();
+		t.insert(
+			&b"jkl".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111111".to_vec(),
+		)
+		.unwrap();
+		t.insert(
+			&b"mno".to_vec(),
+			&b"111111111111111111111111111111111111111111111111111111111111".to_vec(),
+		)
+		.unwrap();
 		t.root().clone()
 	};
 	let old_root = root.clone();
@@ -158,6 +204,4 @@ fn test_trie_remove() {
 	let v = t.get(&b"abc".to_vec());
 	println!("old get(abc): {:?}", v);
 	println!("old trie: {:#?}", t);
-
-
 }

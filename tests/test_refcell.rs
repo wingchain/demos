@@ -12,24 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use hashlink::linked_hash_map::Entry;
-use hashlink::LinkedHashMap;
+use std::cell::RefCell;
 
 #[test]
-fn test_hashlink() {
-	let mut a = LinkedHashMap::new();
+fn test_refcell() {
+	#[derive(Debug)]
+	struct A {
+		inner: u32,
+	};
 
-	a.insert("b", "bb'");
-	a.insert("a", "aa");
+	let a = RefCell::new(A { inner: 10 });
 
-	match a.entry("b") {
-		Entry::Occupied(mut entry) => {
-			entry.to_back();
-		}
-		_ => (),
+	{
+		let b = a.borrow();
+		println!("a={:?}", b);
 	}
 
-	for (k, v) in a {
-		println!("{:?} = {:?}", k, v);
-	}
+	let _c = a.into_inner();
 }

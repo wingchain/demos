@@ -12,24 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use hashlink::linked_hash_map::Entry;
-use hashlink::LinkedHashMap;
+use smallvec::alloc::rc::Rc;
+
+struct A {
+	#[allow(dead_code)]
+	x: String,
+	x_ref: XRef<'static>,
+}
+
+struct XRef<'a> {
+	x: &'a String,
+}
+
+struct AW {
+	inner: A,
+}
 
 #[test]
-fn test_hashlink() {
-	let mut a = LinkedHashMap::new();
+fn test_transmute() {
+	let x = "abc".to_string();
+	let x_ref = XRef { x: &x };
+	let x_ref = unsafe { std::mem::transmute::<XRef<'_>, XRef<'static>>(x_ref) };
+	let a = A { x, x_ref };
 
-	a.insert("b", "bb'");
-	a.insert("a", "aa");
+	//println!("{}", a.x_ref.x);
 
-	match a.entry("b") {
-		Entry::Occupied(mut entry) => {
-			entry.to_back();
-		}
-		_ => (),
-	}
+	let a = Rc::new(AW { inner: a });
 
-	for (k, v) in a {
-		println!("{:?} = {:?}", k, v);
-	}
+	println!("{}", a.inner.x_ref.x);
+	println!("{}", a.inner.x_ref.x);
 }

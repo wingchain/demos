@@ -15,7 +15,7 @@
 
 extern crate test;
 
-use test::{Bencher, black_box};
+use test::{black_box, Bencher};
 
 use parity_codec::alloc::collections::HashMap;
 
@@ -25,14 +25,12 @@ trait Run {
 
 #[derive(Clone)]
 struct A {
-	a: Vec<u8>
+	a: Vec<u8>,
 }
 
 impl A {
 	fn new() -> Self {
-		A {
-			a: vec![0u8; 1024],
-		}
+		A { a: vec![0u8; 1024] }
 	}
 }
 
@@ -44,14 +42,12 @@ impl Run for A {
 
 #[derive(Clone)]
 struct B {
-	b: Vec<u8>
+	b: Vec<u8>,
 }
 
 impl B {
 	fn new() -> Self {
-		B {
-			b: vec![0u8; 1024],
-		}
+		B { b: vec![0u8; 1024] }
 	}
 }
 
@@ -60,7 +56,6 @@ impl Run for B {
 		println!("b");
 	}
 }
-
 
 #[bench]
 fn bench_dynamic_dispatch_trait_object(b: &mut Bencher) {
@@ -77,7 +72,6 @@ fn bench_dynamic_dispatch_trait_object(b: &mut Bencher) {
 		run("a", &map);
 		run("b", &map);
 	};
-
 
 	b.iter(|| black_box(run()));
 }
@@ -97,7 +91,6 @@ fn bench_dynamic_dispatch_fn(be: &mut Bencher) {
 		run("a", &map);
 		run("b", &map);
 	};
-
 
 	be.iter(|| black_box(run()));
 }
@@ -190,7 +183,6 @@ fn bench_static_dispatch_vec(be: &mut Bencher) {
 	map.push(("a", a));
 	map.push(("b", b.clone()));
 
-
 	fn run(name: &str, vec: &Vec<(&str, AOrB)>) {
 		for (target_name, x) in vec {
 			if &name == target_name {
@@ -213,7 +205,6 @@ fn bench_static_dispatch_vec(be: &mut Bencher) {
 
 #[bench]
 fn bench_static_dispatch_struct(be: &mut Bencher) {
-
 	struct Map {
 		a: A,
 		b: B,

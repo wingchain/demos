@@ -15,17 +15,17 @@
 
 extern crate test;
 
-use test::Bencher;
-use std::hint::black_box;
-use rand::random;
-use hash_db::Hasher;
-use std::sync::{Arc, RwLock};
-use parity_codec::alloc::collections::HashMap;
-use rayon::prelude::*;
 use chashmap::CHashMap;
 use crossbeam_queue::ArrayQueue;
+use hash_db::Hasher;
+use parity_codec::alloc::collections::HashMap;
+use rand::random;
+use rayon::prelude::*;
+use std::hint::black_box;
+use std::sync::{Arc, RwLock};
+use test::Bencher;
 
-const TXS_COUNT : usize = 10000;
+const TXS_COUNT: usize = 10000;
 
 #[bench]
 fn bench_queue_hashmap_rwlock_std(b: &mut Bencher) {
@@ -38,7 +38,7 @@ fn bench_queue_hashmap_rwlock_std(b: &mut Bencher) {
 		});
 	};
 
-	b.iter( || black_box(run()));
+	b.iter(|| black_box(run()));
 }
 
 #[bench]
@@ -52,7 +52,7 @@ fn bench_queue_hashmap_rwlock_parking_lot(b: &mut Bencher) {
 		});
 	};
 
-	b.iter( || black_box(run()));
+	b.iter(|| black_box(run()));
 }
 
 #[bench]
@@ -66,7 +66,7 @@ fn bench_queue_chashmap(b: &mut Bencher) {
 		});
 	};
 
-	b.iter( || black_box(run()));
+	b.iter(|| black_box(run()));
 }
 
 #[bench]
@@ -80,7 +80,7 @@ fn bench_queue_array_queue(b: &mut Bencher) {
 		});
 	};
 
-	b.iter( || black_box(run()));
+	b.iter(|| black_box(run()));
 }
 
 #[bench]
@@ -95,7 +95,7 @@ fn bench_queue_mpsc(b: &mut Bencher) {
 		});
 	};
 
-	b.iter( || black_box(run()));
+	b.iter(|| black_box(run()));
 }
 
 #[bench]
@@ -109,7 +109,7 @@ fn bench_queue_vec_parking_lot(b: &mut Bencher) {
 		});
 	};
 
-	b.iter( || black_box(run()));
+	b.iter(|| black_box(run()));
 }
 
 fn gen_txs(size: usize) -> Vec<([u8; 32], Vec<u8>)> {

@@ -17,14 +17,15 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use crossbeam_queue::ArrayQueue;
-use futures::future::FutureExt;
 use futures::future::join_all;
-use futures::Stream;
+use futures::future::FutureExt;
 use futures::task::{Context, Waker};
+use futures::Stream;
 use smallvec::alloc::sync::Arc;
 use tokio::macros::support::{Pin, Poll};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time;
 
 #[test]
@@ -92,7 +93,6 @@ fn test_channel() {
 		time::delay_for(Duration::from_secs(10)).await;
 	});
 }
-
 
 #[test]
 fn test_tokio_select() {
@@ -208,10 +208,7 @@ fn test_stream() {
 	impl Stream for Reader {
 		type Item = ();
 
-		fn poll_next(
-			self: Pin<&mut Self>,
-			cx: &mut Context<'_>,
-		) -> Poll<Option<Self::Item>> {
+		fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
 			if self.buffer.inner.is_empty() {
 				let mut a = self.buffer.waker.write().unwrap();
 				*a = Some(cx.waker().clone());
@@ -238,4 +235,69 @@ fn test_stream() {
 	rt.block_on(async {
 		time::delay_for(Duration::from_secs(10)).await;
 	});
+}
+
+#[test]
+fn test_tokio_spawn() {
+	let mut rt = Runtime::new().unwrap();
+
+	rt.block_on(async {
+		tokio::spawn(async {
+			let mut int = time::interval(Duration::from_millis(1000));
+			loop {
+				int.tick().await;
+				println!("tick");
+			}
+		});
+
+		time::delay_for(Duration::from_secs(10)).await;
+	});
+}
+
+#[test]
+fn test_tokio_signal() {
+	let mut rt = Runtime::new().unwrap();
+
+	rt.block_on(async {
+		Service::new();
+
+		println!("a");
+
+		let _ = tokio::signal::ctrl_c().await;
+
+		println!("b")
+	})
+}
+
+struct Service {
+	#[allow(dead_code)]
+	tx: Sender<u32>,
+}
+
+impl Service {
+	fn new() -> Self {
+		let (tx, rx) = mpsc::channel(100);
+
+		tokio::spawn(process_buffer(rx));
+
+		Self { tx }
+	}
+}
+
+async fn process_buffer(rx: Receiver<u32>) {
+	let mut rx = rx;
+	loop {
+		let a = rx.recv().await;
+		if let Some(a) = a {
+			println!("received: {}", a);
+		}
+	}
+
+	// let mut rx = rx.fuse();
+	// loop {
+	// 	let a = rx.next().await;
+	// 	if let Some(a) = a {
+	// 		println!("received");
+	// 	}
+	// }
 }

@@ -12,24 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use hashlink::linked_hash_map::Entry;
-use hashlink::LinkedHashMap;
-
 #[test]
-fn test_hashlink() {
-	let mut a = LinkedHashMap::new();
+fn test_trait() {
+	struct A {
+		a: u32,
+	}
 
-	a.insert("b", "bb'");
-	a.insert("a", "aa");
-
-	match a.entry("b") {
-		Entry::Occupied(mut entry) => {
-			entry.to_back();
+	impl A {
+		fn new() -> Self {
+			A { a: 1 }
 		}
-		_ => (),
 	}
 
-	for (k, v) in a {
-		println!("{:?} = {:?}", k, v);
+	trait New {
+		fn new() -> Self;
 	}
+
+	impl New for A {
+		fn new() -> Self {
+			Self::new()
+		}
+	}
+
+	let a: A = New::new();
+
+	println!("{}", a.a);
 }

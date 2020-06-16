@@ -12,24 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use hashlink::linked_hash_map::Entry;
-use hashlink::LinkedHashMap;
+use std::time::Duration;
+
+use tokio::runtime::Runtime;
+use tokio::time;
 
 #[test]
-fn test_hashlink() {
-	let mut a = LinkedHashMap::new();
+fn test_mut_self() {
+	let mut rt = Runtime::new().unwrap();
 
-	a.insert("b", "bb'");
-	a.insert("a", "aa");
+	let mut service = Service { n: Box::new(0) };
 
-	match a.entry("b") {
-		Entry::Occupied(mut entry) => {
-			entry.to_back();
+	rt.block_on(service.start());
+}
+
+struct Service {
+	n: Box<u32>,
+}
+
+impl Service {
+	async fn start(&mut self) {
+		loop {
+			self.n = Box::new(*self.n + 1);
+
+			println!("n: {}", *self.n);
+
+			time::delay_for(Duration::from_secs(1)).await;
 		}
-		_ => (),
-	}
-
-	for (k, v) in a {
-		println!("{:?} = {:?}", k, v);
 	}
 }

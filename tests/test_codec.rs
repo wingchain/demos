@@ -285,7 +285,6 @@ struct S {
 	b: u32,
 }
 
-
 #[test]
 fn test_codec() {
 	let num = Number::U16(2);
@@ -316,10 +315,7 @@ fn test_codec() {
 
 	println!("{:?}", result);
 
-	let a = S {
-		a: 1,
-		b: 1,
-	};
+	let a = S { a: 1, b: 1 };
 
 	let result = a.encode();
 	println!("{:?}", result);

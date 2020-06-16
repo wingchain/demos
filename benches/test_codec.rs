@@ -15,7 +15,7 @@
 
 extern crate test;
 
-use test::{Bencher, black_box};
+use test::{black_box, Bencher};
 
 use parity_codec::{Decode, Encode};
 
@@ -23,7 +23,7 @@ use parity_codec::{Decode, Encode};
 struct Wrapper([u8; 128]);
 
 #[derive(Encode, Decode)]
-enum Variable{
+enum Variable {
 	L16([u8; 16]),
 	L32([u8; 32]),
 	L128([u8; 128]),
@@ -34,9 +34,7 @@ enum Variable{
 fn bench_vec_encode(b: &mut Bencher) {
 	let a = vec![1u8; 128];
 
-	let encode = || {
-		a.encode()
-	};
+	let encode = || a.encode();
 
 	b.iter(|| black_box(encode()));
 }
@@ -47,9 +45,7 @@ fn bench_vec_encode_to(b: &mut Bencher) {
 
 	let mut r = Vec::with_capacity(10000);
 
-	let mut encode = || {
-		a.encode_to(&mut r)
-	};
+	let mut encode = || a.encode_to(&mut r);
 
 	b.iter(|| black_box(encode()));
 }
@@ -58,9 +54,7 @@ fn bench_vec_encode_to(b: &mut Bencher) {
 fn bench_array_encode(b: &mut Bencher) {
 	let a = Wrapper([1u8; 128]);
 
-	let encode = || {
-		a.encode()
-	};
+	let encode = || a.encode();
 
 	b.iter(|| black_box(encode()));
 }
@@ -71,9 +65,7 @@ fn bench_array_encode_to(b: &mut Bencher) {
 
 	let mut r = Vec::with_capacity(10000);
 
-	let mut encode = || {
-		a.encode_to(&mut r)
-	};
+	let mut encode = || a.encode_to(&mut r);
 
 	b.iter(|| black_box(encode()));
 }
@@ -82,9 +74,7 @@ fn bench_array_encode_to(b: &mut Bencher) {
 fn bench_enum_encode(b: &mut Bencher) {
 	let a = Variable::L128([1u8; 128]);
 
-	let encode = || {
-		a.encode()
-	};
+	let encode = || a.encode();
 
 	b.iter(|| black_box(encode()));
 }
@@ -95,9 +85,7 @@ fn bench_enum_encode_to(b: &mut Bencher) {
 
 	let mut r = Vec::with_capacity(10000);
 
-	let mut encode = || {
-		a.encode_to(&mut r)
-	};
+	let mut encode = || a.encode_to(&mut r);
 
 	b.iter(|| black_box(encode()));
 }
@@ -109,7 +97,7 @@ fn bench_vec_decode(b: &mut Bencher) {
 	let encoded = a.encode();
 
 	let decode = || {
-		let t : Vec<u8> = Decode::decode(&mut &encoded[..]).unwrap();
+		let t: Vec<u8> = Decode::decode(&mut &encoded[..]).unwrap();
 		t
 	};
 
