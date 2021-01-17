@@ -24,9 +24,9 @@ use tokio::time;
 
 #[test]
 fn test_schedule1() {
-	let mut rt = Runtime::new().unwrap();
+	let rt = Runtime::new().unwrap();
 
-	rt.block_on(run());
+	rt.spawn(run());
 }
 
 async fn run() {
@@ -45,7 +45,7 @@ async fn run() {
 
 #[test]
 fn test_schedule2() {
-	let mut rt = Runtime::new().unwrap();
+	let rt = Runtime::new().unwrap();
 
 	let task = Scheduler {
 		duration: 5000,
@@ -59,7 +59,10 @@ fn test_schedule2() {
 		future::ready(())
 	});
 
-	rt.block_on(task);
+	rt.spawn(task);
+	rt.block_on(async {
+		time::sleep(Duration::from_secs(10));
+	})
 }
 
 async fn work(info: ScheduleInfo) -> Result<(), ()> {

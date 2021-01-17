@@ -12,24 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use wasmer_runtime::{imports, func};
-use wasmer_runtime_core::memory::Memory;
-use wasmer_runtime_core::vm::Ctx;
 use serde::Serialize;
 use std::ffi::c_void;
+use wasmer_runtime::{func, imports};
+use wasmer_runtime_core::memory::Memory;
+use wasmer_runtime_core::vm::Ctx;
 
 #[test]
 fn test_wasm_rs() {
-	test_wasm( &include_bytes!("../wasm-rs/pkg/wasm_rs_bg.wasm")[..]);
+	test_wasm(&include_bytes!("../wasm-rs/pkg/wasm_rs_bg.wasm")[..]);
 }
 
 #[test]
 fn test_wasm_as() {
-	test_wasm( &include_bytes!("../wasm-as/build/untouched.wasm")[..]);
+	test_wasm(&include_bytes!("../wasm-as/build/untouched.wasm")[..]);
 }
 
 fn test_wasm(code: &[u8]) {
-
 	let module = wasmer_runtime::compile(code).unwrap();
 
 	let input = Input {
@@ -37,13 +36,15 @@ fn test_wasm(code: &[u8]) {
 		bar: vec![1, 2, 3, 4],
 	};
 
-	let input= serde_json::to_vec(&input).unwrap();
+	let input = serde_json::to_vec(&input).unwrap();
 
 	let mut context = Context {
 		memory: None,
 		input,
 		output: None,
 	};
+
+	println!("before: {}", context.input.len());
 
 	let context_ref = ContextRef(&mut context as *mut _ as *mut c_void);
 
@@ -92,6 +93,7 @@ struct Input {
 
 fn input_read(ctx: &mut Ctx, ptr: u64) {
 	let context = unsafe { &mut *(ctx.data as *mut Context) };
+	println!("input_len: {}", context.input.len());
 	let memory = &context.memory.unwrap();
 	let ptr = ptr as usize;
 	memory.view()[ptr..(ptr + context.input.len())]
@@ -102,6 +104,7 @@ fn input_read(ctx: &mut Ctx, ptr: u64) {
 
 fn input_len(ctx: &mut Ctx) -> u64 {
 	let context = unsafe { &mut *(ctx.data as *mut Context) };
+	println!("input_len: {}", context.input.len());
 	context.input.len() as u64
 }
 
@@ -115,9 +118,6 @@ fn output_write(ctx: &mut Ctx, len: u64, ptr: u64) {
 		output[i] = cell.get();
 	}
 	context.output = Some(output);
-
 }
 
-pub fn abort(_ctx: &mut Ctx, _msg_ptr: u32, _filename_ptr: u32, _line: u32, _col: u32){
-
-}
+pub fn abort(_ctx: &mut Ctx, _msg_ptr: u32, _filename_ptr: u32, _line: u32, _col: u32) {}

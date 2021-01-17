@@ -30,7 +30,7 @@ use tokio::time;
 
 #[test]
 fn test_future() {
-	let mut rt = Runtime::new().unwrap();
+	let rt = Runtime::new().unwrap();
 
 	rt.spawn(a());
 
@@ -39,7 +39,7 @@ fn test_future() {
 	rt.spawn(c());
 
 	rt.block_on(async {
-		time::delay_for(Duration::from_secs(10)).await;
+		time::sleep(Duration::from_secs(10)).await;
 	});
 }
 
@@ -69,13 +69,13 @@ async fn c() {
 
 #[test]
 fn test_channel() {
-	let mut rt = Runtime::new().unwrap();
+	let rt = Runtime::new().unwrap();
 
-	let (mut tx, mut rx) = mpsc::channel(100);
+	let (tx, mut rx) = mpsc::channel(100);
 
 	rt.spawn(async move {
 		for i in 0..1000 {
-			time::delay_for(Duration::from_secs(2)).await;
+			time::sleep(Duration::from_secs(2)).await;
 			tx.send(i).await.unwrap();
 			println!("send {}", i);
 		}
@@ -90,13 +90,13 @@ fn test_channel() {
 	});
 
 	rt.block_on(async {
-		time::delay_for(Duration::from_secs(10)).await;
+		time::sleep(Duration::from_secs(10)).await;
 	});
 }
 
 #[test]
 fn test_tokio_select() {
-	let mut rt = Runtime::new().unwrap();
+	let rt = Runtime::new().unwrap();
 
 	rt.spawn(async {
 		let fs = vec![s("a").boxed(), s("b").boxed(), s("c").boxed()];
@@ -105,7 +105,7 @@ fn test_tokio_select() {
 	});
 
 	rt.block_on(async {
-		time::delay_for(Duration::from_secs(10)).await;
+		time::sleep(Duration::from_secs(10)).await;
 	});
 }
 
@@ -133,7 +133,7 @@ fn test_loop() {
 		inner: ArrayQueue::new(1024),
 	};
 
-	let mut rt = Runtime::new().unwrap();
+	let rt = Runtime::new().unwrap();
 
 	let buffer = Arc::new(buffer);
 	let buffer_clone = buffer.clone();
@@ -160,7 +160,7 @@ fn test_loop() {
 	});
 
 	rt.block_on(async {
-		time::delay_for(Duration::from_secs(10)).await;
+		time::sleep(Duration::from_secs(10)).await;
 	});
 }
 
@@ -186,7 +186,7 @@ fn test_stream() {
 		waker: RwLock::new(None),
 	};
 
-	let mut rt = Runtime::new().unwrap();
+	let rt = Runtime::new().unwrap();
 
 	let buffer = Arc::new(buffer);
 	let buffer_clone = buffer.clone();
@@ -233,13 +233,13 @@ fn test_stream() {
 	});
 
 	rt.block_on(async {
-		time::delay_for(Duration::from_secs(10)).await;
+		time::sleep(Duration::from_secs(10)).await;
 	});
 }
 
 #[test]
 fn test_tokio_spawn() {
-	let mut rt = Runtime::new().unwrap();
+	let rt = Runtime::new().unwrap();
 
 	rt.block_on(async {
 		tokio::spawn(async {
@@ -250,13 +250,13 @@ fn test_tokio_spawn() {
 			}
 		});
 
-		time::delay_for(Duration::from_secs(10)).await;
+		time::sleep(Duration::from_secs(10)).await;
 	});
 }
 
 #[test]
 fn test_tokio_signal() {
-	let mut rt = Runtime::new().unwrap();
+	let rt = Runtime::new().unwrap();
 
 	rt.block_on(async {
 		Service::new();

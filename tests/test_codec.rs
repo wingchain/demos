@@ -286,6 +286,17 @@ struct S {
 }
 
 #[test]
+fn test_vec() {
+	let a = Vec::<u32>::new();
+	let a = a.encode();
+	println!("{:?}", a);
+
+	let a = Vec::<(u32, u32)>::new();
+	let a = a.encode();
+	println!("{:?}", a);
+}
+
+#[test]
 fn test_codec() {
 	let num = Number::U16(2);
 
