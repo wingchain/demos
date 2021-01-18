@@ -33,7 +33,7 @@ wasmer-runtime = { version = "=0.17.0", features = ["default-backend-singlepass"
 wasmer-runtime-core = { version = "=0.17.0" }
 bytes = "0.5"
 fnv = "1.0.6"
-rocksdb = "0.13.0"
+rocksdb = "0.15.0"
 tempfile = "3.1.0"
 num_cpus = "1.0"
 lru = "0.6.1"
