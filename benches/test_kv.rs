@@ -11,6 +11,7 @@ use tempfile::tempdir;
 use std::cmp;
 use tokio::runtime::Runtime;
 use std::sync::Arc;
+use lru::LruCache;
 
 #[bench]
 fn bench_kv_hash_map(b: &mut Bencher) {
@@ -41,6 +42,20 @@ fn bench_kv_fnv_hash_map(b: &mut Bencher) {
     b.iter(||black_box({
         for i in 0..10000 {
             let _a = map.get(format!("key{}", i).as_bytes());
+        }
+    }))
+}
+
+#[bench]
+fn bench_kv_lru_hash_map(b: &mut Bencher) {
+    let data =  get_data();
+    let mut map: LruCache<Vec<u8>, Vec<u8>> = LruCache::new(10000);
+    for (k, v) in data {
+        map.put(k, v);
+    }
+    b.iter(||black_box({
+        for i in 0..10000 {
+            let _a = map.get(&format!("key{}", i).as_bytes().to_vec());
         }
     }))
 }
