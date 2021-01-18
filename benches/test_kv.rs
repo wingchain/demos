@@ -10,9 +10,6 @@ use rocksdb::{DB, BlockBasedOptions, Options, WriteOptions, ReadOptions};
 use tempfile::tempdir;
 use std::cmp;
 use tokio::runtime::Runtime;
-use tokio::net::{TcpListener, TcpStream};
-use tokio::io::AsyncReadExt;
-use tokio::io::AsyncWriteExt;
 use std::sync::Arc;
 
 #[bench]
@@ -91,66 +88,149 @@ fn bench_kv_tcp(b: &mut Bencher) {
     let data = get_data();
     let data: HashMap<Vec<u8>, Vec<u8>> = data.into_iter().collect();
     let rt = Runtime::new().unwrap();
-    rt.spawn(listen(data));
+    rt.spawn(tokio_tcp::listen(data));
 
-    let mut socket = rt.block_on(connect()).unwrap();
+    let mut socket = rt.block_on(tokio_tcp::connect()).unwrap();
 
     b.iter(||black_box({
         rt.block_on(async {
             for i in 0..10000 {
-                let _a = get(&mut socket,format!("key{}", i).as_bytes()).await;
+                let _a = tokio_tcp::get(&mut socket,format!("key{}", i).as_bytes()).await;
             }
         });
     }));
 }
 
-async fn get(socket: &mut TcpStream, key: &[u8]) -> Option<Vec<u8>> {
-    socket.write_u8(key.len() as u8).await.unwrap();
-    socket.write(key).await.unwrap();
-    let some = socket.read_u8().await.unwrap();
-    match some {
-        1 => {
+#[bench]
+fn bench_kv_std_tcp(b: &mut Bencher) {
+    let data = get_data();
+    let data: HashMap<Vec<u8>, Vec<u8>> = data.into_iter().collect();
+    std::thread::spawn(||std_tcp::listen(data));
+
+    let mut socket = std_tcp::connect().unwrap();
+
+    b.iter(||black_box({
+        for i in 0..10000 {
+            let _a = std_tcp::get(&mut socket,format!("key{}", i).as_bytes());
+        }
+    }));
+}
+
+mod tokio_tcp {
+    use super::*;
+    use tokio::net::{TcpListener, TcpStream};
+    use tokio::io::AsyncReadExt;
+    use tokio::io::AsyncWriteExt;
+    pub async fn get(socket: &mut TcpStream, key: &[u8]) -> Option<Vec<u8>> {
+        socket.write_u8(key.len() as u8).await.unwrap();
+        socket.write(key).await.unwrap();
+        let some = socket.read_u8().await.unwrap();
+        match some {
+            1 => {
+                let len = socket.read_u8().await.unwrap();
+                let mut payload = vec![0u8; len as usize];
+                socket.read_exact(&mut payload).await.unwrap();
+                Some(payload)
+            },
+            0 => {
+                None
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    pub async fn connect() -> std::io::Result<TcpStream> {
+        let stream = TcpStream::connect("127.0.0.1:8888").await?;
+        Ok(stream)
+    }
+
+    pub async fn listen(data: HashMap<Vec<u8>, Vec<u8>>) -> std::io::Result<()> {
+        let listener = TcpListener::bind("0.0.0.0:8888").await?;
+        let data = Arc::new(data);
+        loop {
+            let (socket, _) = listener.accept().await?;
+            tokio::spawn(process_socket(socket, data.clone()));
+        }
+    }
+
+    pub async fn process_socket(mut socket: TcpStream, data: Arc<HashMap<Vec<u8>, Vec<u8>>>) {
+        loop {
             let len = socket.read_u8().await.unwrap();
             let mut payload = vec![0u8; len as usize];
             socket.read_exact(&mut payload).await.unwrap();
-            Some(payload)
-        },
-        0 => {
-            None
-        },
-        _ => unreachable!(),
+            let k = payload;
+            let v = data.get(&k);
+            match v {
+                Some(v) => {
+                    socket.write_u8(1).await.unwrap();
+                    socket.write_u8(v.len() as u8).await.unwrap();
+                    socket.write(v).await.unwrap();
+                },
+                None => {
+                    socket.write_u8(0).await.unwrap();
+                }
+            }
+        }
     }
 }
 
-async fn connect() -> std::io::Result<TcpStream> {
-    let stream = TcpStream::connect("127.0.0.1:8888").await?;
-    Ok(stream)
-}
+mod std_tcp {
+    use super::*;
+    use std::net::{TcpStream, TcpListener};
+    use std::io::{Write, Read};
 
-async fn listen(data: HashMap<Vec<u8>, Vec<u8>>) -> std::io::Result<()> {
-    let listener = TcpListener::bind("0.0.0.0:8888").await?;
-    let data = Arc::new(data);
-    loop {
-        let (socket, _) = listener.accept().await?;
-        tokio::spawn(process_socket(socket, data.clone()));
-    }
-}
-
-async fn process_socket(mut socket: TcpStream, data: Arc<HashMap<Vec<u8>, Vec<u8>>>) {
-    loop {
-        let len = socket.read_u8().await.unwrap();
-        let mut payload = vec![0u8; len as usize];
-        socket.read_exact(&mut payload).await.unwrap();
-        let k = payload;
-        let v = data.get(&k);
-        match v {
-            Some(v) => {
-                socket.write_u8(1).await.unwrap();
-                socket.write_u8(v.len() as u8).await.unwrap();
-                socket.write(v).await.unwrap();
+    pub fn get(socket: &mut TcpStream, key: &[u8]) -> Option<Vec<u8>> {
+        socket.write(&[key.len() as u8]).unwrap();
+        socket.write(key).unwrap();
+        let mut some = [0u8; 1];
+        socket.read(&mut some).unwrap();
+        match some[0] {
+            1 => {
+                let mut len = [0u8; 1];
+                socket.read(&mut len).unwrap();
+                let mut payload = vec![0u8; len[0] as usize];
+                socket.read_exact(&mut payload).unwrap();
+                Some(payload)
             },
-            None => {
-                socket.write_u8(0).await.unwrap();
+            0 => {
+                None
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn connect() -> std::io::Result<TcpStream> {
+        let stream = TcpStream::connect("127.0.0.1:8889")?;
+        Ok(stream)
+    }
+
+    pub fn listen(data: HashMap<Vec<u8>, Vec<u8>>) -> std::io::Result<()> {
+        let listener = TcpListener::bind("0.0.0.0:8889")?;
+        let data = Arc::new(data);
+        loop {
+            let (socket, _) = listener.accept()?;
+            let data = data.clone();
+            std::thread::spawn(||process_socket(socket, data));
+        }
+    }
+
+    pub fn process_socket(mut socket: TcpStream, data: Arc<HashMap<Vec<u8>, Vec<u8>>>) {
+        loop {
+            let mut len = [0u8; 1];
+            socket.read(&mut len).unwrap();
+            let mut payload = vec![0u8; len[0] as usize];
+            socket.read_exact(&mut payload).unwrap();
+            let k = payload;
+            let v = data.get(&k);
+            match v {
+                Some(v) => {
+                    socket.write(&[1]).unwrap();
+                    socket.write(&[v.len() as u8]).unwrap();
+                    socket.write(v).unwrap();
+                },
+                None => {
+                    socket.write(&[0]).unwrap();
+                }
             }
         }
     }
@@ -167,8 +247,8 @@ fn get_data() -> Vec<(Vec<u8>, Vec<u8>)> {
 pub fn gen_block_opts() -> BlockBasedOptions {
     let mut opts = BlockBasedOptions::default();
     opts.set_block_size(16 * 1024);
-    opts.set_lru_cache(0);
-    // opts.set_lru_cache(DB_DEFAULT_MEMORY_BUDGET_MB * 1024 * 1024 / 3);
+    // opts.set_lru_cache(0);
+    opts.set_lru_cache(DB_DEFAULT_MEMORY_BUDGET_MB * 1024 * 1024 / 3);
     opts.set_cache_index_and_filter_blocks(true);
     opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
     opts.set_bloom_filter(10, true);
