@@ -13,13 +13,15 @@ use tokio::runtime::Runtime;
 use std::sync::Arc;
 use lru::LruCache;
 
+const KEY_COUNT: usize = 10000;
+
 #[bench]
 fn bench_kv_hash_map(b: &mut Bencher) {
 
     let map: HashMap<Vec<u8>, Vec<u8>> = get_data().into_iter().collect();
 
     b.iter(||black_box({
-        for i in 0..10000 {
+        for i in 0..KEY_COUNT {
             let _a = map.get(format!("key{}", i).as_bytes());
         }
     }))
@@ -30,7 +32,7 @@ fn bench_kv_hash_map(b: &mut Bencher) {
 fn bench_kv_chash_map(b: &mut Bencher) {
     let map: CHashMap<Vec<u8>, Vec<u8>> = get_data().into_iter().collect();
     b.iter(||black_box({
-        for i in 0..10000 {
+        for i in 0..KEY_COUNT {
             let _a = map.get(format!("key{}", i).as_bytes());
         }
     }))
@@ -40,7 +42,7 @@ fn bench_kv_chash_map(b: &mut Bencher) {
 fn bench_kv_fnv_hash_map(b: &mut Bencher) {
     let map: FnvHashMap<Vec<u8>, Vec<u8>> = get_data().into_iter().collect();
     b.iter(||black_box({
-        for i in 0..10000 {
+        for i in 0..KEY_COUNT {
             let _a = map.get(format!("key{}", i).as_bytes());
         }
     }))
@@ -49,12 +51,12 @@ fn bench_kv_fnv_hash_map(b: &mut Bencher) {
 #[bench]
 fn bench_kv_lru_hash_map(b: &mut Bencher) {
     let data =  get_data();
-    let mut map: LruCache<Vec<u8>, Vec<u8>> = LruCache::new(10000);
+    let mut map: LruCache<Vec<u8>, Vec<u8>> = LruCache::new(KEY_COUNT);
     for (k, v) in data {
         map.put(k, v);
     }
     b.iter(||black_box({
-        for i in 0..10000 {
+        for i in 0..KEY_COUNT {
             let _a = map.get(&format!("key{}", i).as_bytes().to_vec());
         }
     }))
@@ -64,13 +66,15 @@ fn bench_kv_lru_hash_map(b: &mut Bencher) {
 fn bench_kv_rocksdb(b: &mut Bencher) {
     let path = tempdir().expect("Could not create a temp dir");
     let path = path.into_path();
-    let db = DB::open_default(path).unwrap();
+    let db = DB::open_default(&path).unwrap();
     let data = get_data();
     for (k, v) in data {
         db.put(k, v).unwrap();
     }
+    drop(db);
+    let db = DB::open_default(&path).unwrap();
     b.iter(||black_box({
-        for i in 0..10000 {
+        for i in 0..KEY_COUNT {
             let _a = db.get(format!("key{}", i).as_bytes());
         }
     }))
@@ -86,20 +90,22 @@ fn bench_kv_rocksdb_with_option(b: &mut Bencher) {
     let _write_opts = gen_write_opts();
     let opts = gen_opts(1, &block_opts);
 
-    let db = DB::open(&opts, path).unwrap();
+    let db = DB::open(&opts, &path).unwrap();
     let data = get_data();
     for (k, v) in data {
         db.put(k, v).unwrap();
     }
+    drop(db);
+    let db = DB::open(&opts, &path).unwrap();
     b.iter(||black_box({
-        for i in 0..10000 {
+        for i in 0..KEY_COUNT {
             let _a = db.get_opt(format!("key{}", i).as_bytes(), &read_opts);
         }
     }))
 }
 
 #[bench]
-fn bench_kv_tcp(b: &mut Bencher) {
+fn bench_kv_tcp_tokio(b: &mut Bencher) {
     let data = get_data();
     let data: HashMap<Vec<u8>, Vec<u8>> = data.into_iter().collect();
     let rt = Runtime::new().unwrap();
@@ -109,7 +115,7 @@ fn bench_kv_tcp(b: &mut Bencher) {
 
     b.iter(||black_box({
         rt.block_on(async {
-            for i in 0..10000 {
+            for i in 0..KEY_COUNT {
                 let _a = tokio_tcp::get(&mut socket,format!("key{}", i).as_bytes()).await;
             }
         });
@@ -117,7 +123,7 @@ fn bench_kv_tcp(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_kv_std_tcp(b: &mut Bencher) {
+fn bench_kv_tcp_std(b: &mut Bencher) {
     let data = get_data();
     let data: HashMap<Vec<u8>, Vec<u8>> = data.into_iter().collect();
     std::thread::spawn(||std_tcp::listen(data));
@@ -125,10 +131,150 @@ fn bench_kv_std_tcp(b: &mut Bencher) {
     let mut socket = std_tcp::connect().unwrap();
 
     b.iter(||black_box({
-        for i in 0..10000 {
+        for i in 0..KEY_COUNT {
             let _a = std_tcp::get(&mut socket,format!("key{}", i).as_bytes());
         }
     }));
+}
+
+#[bench]
+fn bench_kv_udp_tokio(b: &mut Bencher) {
+    let data = get_data();
+    let data: HashMap<Vec<u8>, Vec<u8>> = data.into_iter().collect();
+    let rt = Runtime::new().unwrap();
+    rt.spawn(tokio_udp::listen(data));
+
+    let mut socket = rt.block_on(tokio_udp::connect()).unwrap();
+
+    b.iter(||black_box({
+        rt.block_on(async {
+            for i in 0..KEY_COUNT {
+                let _a = tokio_udp::get(&mut socket,format!("key{}", i).as_bytes()).await.unwrap();
+            }
+        });
+    }));
+}
+
+#[bench]
+fn bench_kv_udp_std(b: &mut Bencher) {
+    let data = get_data();
+    let data: HashMap<Vec<u8>, Vec<u8>> = data.into_iter().collect();
+    std::thread::spawn(||std_udp::listen(data));
+
+    let mut socket = std_udp::connect().unwrap();
+
+    b.iter(||black_box({
+        for i in 0..KEY_COUNT {
+            let _a = std_udp::get(&mut socket,format!("key{}", i).as_bytes()).unwrap();
+        }
+    }));
+}
+
+mod tokio_udp {
+    use super::*;
+    use tokio::net::{UdpSocket};
+    use std::net::SocketAddr;
+
+    pub async fn listen(data: HashMap<Vec<u8>, Vec<u8>>)-> std::io::Result<()> {
+
+        let socket = UdpSocket::bind("0.0.0.0:8898").await?;
+
+        let mut buf = vec![0; 1024];
+        let mut to_send : Option<(usize, SocketAddr)> = None;
+        loop {
+            if let Some((size, peer)) = to_send {
+                let _amt = socket.send_to(&buf[..size], &peer).await?;
+            }
+
+            let (size, peer) = socket.recv_from(&mut buf).await?;
+            let k = &buf[..size];
+            let v = data.get(k);
+            to_send = match v{
+                None => {
+                    buf[0] = 0;
+                    Some((1, peer))
+                },
+                Some(v) => {
+                    buf[0] = 1;
+                    buf[1..v.len()+1].copy_from_slice(&v);
+                    Some((v.len()+1, peer))
+                }
+            };
+        }
+    }
+
+    pub async fn connect() -> std::io::Result<UdpSocket> {
+        let socket = UdpSocket::bind("127.0.0.1:0").await?;
+        socket.connect("127.0.0.1:8898").await?;
+        Ok(socket)
+    }
+
+    pub async fn get(socket: &mut UdpSocket, key: &[u8]) -> std::io::Result<Option<Vec<u8>>> {
+        socket.send(key).await?;
+        let mut data = vec![0u8; 1024];
+        let len = socket.recv(&mut data).await?;
+        match data[0] {
+            0 => Ok(None),
+            1 => {
+               Ok(Some(data[1..len].to_vec()))
+            },
+            _ => unreachable!(),
+        }
+
+    }
+}
+
+mod std_udp {
+    use super::*;
+    use std::net::{SocketAddr, UdpSocket};
+
+    pub fn listen(data: HashMap<Vec<u8>, Vec<u8>>)-> std::io::Result<()> {
+
+        let socket = UdpSocket::bind("0.0.0.0:8899")?;
+
+        let mut buf = vec![0; 1024];
+        let mut to_send : Option<(usize, SocketAddr)> = None;
+        loop {
+            if let Some((size, peer)) = to_send {
+                let _amt = socket.send_to(&buf[..size], &peer)?;
+            }
+
+            let (size, peer) = socket.recv_from(&mut buf)?;
+            let k = &buf[..size];
+            let v = data.get(k);
+            to_send = match v{
+                None => {
+                    buf[0] = 0;
+                    Some((1, peer))
+                },
+                Some(v) => {
+                    buf[0] = 1;
+                    buf[1..v.len()+1].copy_from_slice(&v);
+                    Some((v.len()+1, peer))
+                }
+            };
+        }
+    }
+
+    pub fn connect() -> std::io::Result<UdpSocket> {
+        let socket = UdpSocket::bind("127.0.0.1:0")?;
+        socket.connect("127.0.0.1:8899")?;
+        Ok(socket)
+    }
+
+    pub fn get(socket: &mut UdpSocket, key: &[u8]) -> std::io::Result<Option<Vec<u8>>> {
+        socket.send(key)?;
+        let mut data = vec![0u8; 1024];
+        let len = socket.recv(&mut data)?;
+        match data[0] {
+            0 => Ok(None),
+            1 => {
+                Ok(Some(data[1..len].to_vec()))
+            },
+            _ => unreachable!(),
+        }
+
+    }
 }
 
 mod tokio_tcp {
@@ -137,12 +283,12 @@ mod tokio_tcp {
     use tokio::io::AsyncReadExt;
     use tokio::io::AsyncWriteExt;
     pub async fn get(socket: &mut TcpStream, key: &[u8]) -> Option<Vec<u8>> {
-        socket.write_u8(key.len() as u8).await.unwrap();
+        socket.write_u16(key.len() as u16).await.unwrap();
         socket.write(key).await.unwrap();
         let some = socket.read_u8().await.unwrap();
         match some {
             1 => {
-                let len = socket.read_u8().await.unwrap();
+                let len = socket.read_u16().await.unwrap();
                 let mut payload = vec![0u8; len as usize];
                 socket.read_exact(&mut payload).await.unwrap();
                 Some(payload)
@@ -170,7 +316,7 @@ mod tokio_tcp {
 
     pub async fn process_socket(mut socket: TcpStream, data: Arc<HashMap<Vec<u8>, Vec<u8>>>) {
         loop {
-            let len = socket.read_u8().await.unwrap();
+            let len = socket.read_u16().await.unwrap();
             let mut payload = vec![0u8; len as usize];
             socket.read_exact(&mut payload).await.unwrap();
             let k = payload;
@@ -178,7 +324,7 @@ mod tokio_tcp {
             match v {
                 Some(v) => {
                     socket.write_u8(1).await.unwrap();
-                    socket.write_u8(v.len() as u8).await.unwrap();
+                    socket.write_u16(v.len() as u16).await.unwrap();
                     socket.write(v).await.unwrap();
                 },
                 None => {
@@ -195,15 +341,18 @@ mod std_tcp {
     use std::io::{Write, Read};
 
     pub fn get(socket: &mut TcpStream, key: &[u8]) -> Option<Vec<u8>> {
-        socket.write(&[key.len() as u8]).unwrap();
+        let len = key.len() as u16;
+        let len = u16::to_le_bytes(len);
+        socket.write(&len).unwrap();
         socket.write(key).unwrap();
         let mut some = [0u8; 1];
         socket.read(&mut some).unwrap();
         match some[0] {
             1 => {
-                let mut len = [0u8; 1];
+                let mut len = [0u8; 2];
                 socket.read(&mut len).unwrap();
-                let mut payload = vec![0u8; len[0] as usize];
+                let len = u16::from_le_bytes(len);
+                let mut payload = vec![0u8; len as usize];
                 socket.read_exact(&mut payload).unwrap();
                 Some(payload)
             },
@@ -231,16 +380,19 @@ mod std_tcp {
 
     pub fn process_socket(mut socket: TcpStream, data: Arc<HashMap<Vec<u8>, Vec<u8>>>) {
         loop {
-            let mut len = [0u8; 1];
+            let mut len = [0u8; 2];
             socket.read(&mut len).unwrap();
-            let mut payload = vec![0u8; len[0] as usize];
+            let len = u16::from_le_bytes(len);
+            let mut payload = vec![0u8; len as usize];
             socket.read_exact(&mut payload).unwrap();
             let k = payload;
             let v = data.get(&k);
             match v {
                 Some(v) => {
                     socket.write(&[1]).unwrap();
-                    socket.write(&[v.len() as u8]).unwrap();
+                    let len = v.len() as u16;
+                    let len = u16::to_le_bytes(len);
+                    socket.write(&len).unwrap();
                     socket.write(v).unwrap();
                 },
                 None => {
@@ -253,8 +405,10 @@ mod std_tcp {
 
 fn get_data() -> Vec<(Vec<u8>, Vec<u8>)> {
 
-    (0..10000).map(|n| {
-        (format!("key{}", n).as_bytes().to_vec(), format!("value{}", n).as_bytes().to_vec())
+    (0..KEY_COUNT).map(|n| {
+        let mut v = format!("value{}", n).as_bytes().to_vec();
+        v.extend_from_slice(&vec![0; 768]);
+        (format!("key{}", n).as_bytes().to_vec(), v)
     }).collect()
 
 }
@@ -286,7 +440,6 @@ pub fn gen_opts(col_count: usize, block_opts: &BlockBasedOptions) -> Options {
     opts.set_bytes_per_sync(1048576);
     opts.set_write_buffer_size(memory_budget_per_col(col_count) / 2);
     opts.increase_parallelism(cmp::max(1, ::num_cpus::get() as i32 / 2));
-
     opts
 }
 
@@ -297,7 +450,6 @@ pub fn gen_write_opts() -> WriteOptions {
 pub fn gen_read_opts() -> ReadOptions {
     let mut opts = ReadOptions::default();
     opts.set_verify_checksums(false);
-
     opts
 }
 
