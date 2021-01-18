@@ -16,7 +16,7 @@ smallvec = "1.2.0"
 hash-db = "0.15.2"
 log = "*"
 hashlink = "0.5.0"
-tokio = { version = "1.0", features = ["rt-multi-thread", "time", "sync", "macros", "signal", "net"] }
+tokio = { version = "1.0", features = ["rt-multi-thread", "time", "sync", "macros", "signal", "net", "io-util"] }
 futures = "0.3"
 crossbeam-queue = "0.2"
 async-stream = "0.2"
@@ -32,6 +32,10 @@ futures-timer = "3.0.1"
 wasmer-runtime = { version = "=0.17.0", features = ["default-backend-singlepass"], default-features = false }
 wasmer-runtime-core = { version = "=0.17.0" }
 bytes = "0.5"
+fnv = "1.0.6"
+rocksdb = "0.13.0"
+tempfile = "3.1.0"
+num_cpus = "1.0"
 
 [workspace]
 members = [
